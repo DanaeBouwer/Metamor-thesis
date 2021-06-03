@@ -1,0 +1,65 @@
+---
+title: "Thesis citation test"
+author: "Danae Bouwer"
+date: "25/05/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+##Testing the function
+install.packages('rscopus')
+set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
+print(get_api_key(), reveal = T)
+
+name = 'Ainslie'
+
+get_complete_author_info(last_name = 'Ackerman',first_name = 'Frank', api_key = "44f055d2666f0d63b928f6d10e2f77d2")
+get_author_info(last_name = name ,first_name = 'George', api_key = "44f055d2666f0d63b928f6d10e2f77d2")
+
+```
+
+```{r}
+##Get Article name, put it into function, get data, put into output dataframe
+
+
+for(i in 1:nrow(TestDataFrame)){
+articleTitle = paste0('Title(',TestDataFrame[i,'Article Title'],')')
+##print(articleTitle)
+
+res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2f77d2", max_count = 1,count = 1)
+test = get("error", res$entries[[1]][2])
+if (test == "Result set was empty") {
+df = gen_entries_to_df(res$entries)
+head(df$df)
+
+}
+}
+
+#I need to get it into a df together with the original - add the output into a dataframe but then concatenate them all
+
+
+```
+
+```{r}
+##identify if the data is in Scopus or not
+
+res = scopus_search(query = "Title(Specious Reward: A Behavioural Theory of Impulsiveness and Impulse Control)", api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+#df = gen_entries_to_df(res$entries)
+#head(df$df)
+res$entries
+
+IsError = try(get("error", res$entries[[1]][2]))
+
+if (IsError[1] != "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
+  print("works!")
+}else {
+  print("whoopwhoop")
+}
+
+
+```
+
