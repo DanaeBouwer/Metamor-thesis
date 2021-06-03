@@ -11,14 +11,32 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 ##Testing the function
-install.packages('rscopus')
-set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
-print(get_api_key(), reveal = T)
+#install.packages('rscopus')
+#set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
+#print(get_api_key(), reveal = T)
 
 name = 'Ainslie'
 
-get_complete_author_info(last_name = 'Ackerman',first_name = 'Frank', api_key = "44f055d2666f0d63b928f6d10e2f77d2")
+get_complete_author_info(last_name = 'Ainslie',first_name = 'George', api_key = "44f055d2666f0d63b928f6d10e2f77d2")
 get_author_info(last_name = name ,first_name = 'George', api_key = "44f055d2666f0d63b928f6d10e2f77d2")
+
+##try author_retrieval_id
+y = author_retrieval_id(id = "2-s2.0-0016525445", identifier = c("eid"))
+
+df = gen_entries_to_df(y$content)
+head(df$df)
+y$get_statement
+
+##try object_retrieval
+x = object_retrieval(id = "2-s2.0-0016525445", identifier = c("eid"))
+x$content
+
+##try process_author_name
+process_author_name(au_id = NULL, last_name = 'Ainslie', first_name = 'George', affil_id = NULL, api_key = NULL, verbose = TRUE, headers = NULL)
+
+
+
+author_retrieval(au_id = "2-s2.0-0016525445", identifier = c("eid"),view = c("STANDARD"),api_key = "44f055d2666f0d63b928f6d10e2f77d2")
 
 ```
 
@@ -31,12 +49,15 @@ articleTitle = paste0('Title(',TestDataFrame[i,'Article Title'],')')
 ##print(articleTitle)
 
 res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2f77d2", max_count = 1,count = 1)
-test = get("error", res$entries[[1]][2])
-if (test == "Result set was empty") {
+
+IsError = try(get("error", res$entries[[1]][2]))
+if (IsError[1] != "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
 df = gen_entries_to_df(res$entries)
 head(df$df)
-
+}else {
+ ##put empty thingy in the dataframe
 }
+
 }
 
 #I need to get it into a df together with the original - add the output into a dataframe but then concatenate them all
@@ -51,7 +72,10 @@ res = scopus_search(query = "Title(Specious Reward: A Behavioural Theory of Impu
 #df = gen_entries_to_df(res$entries)
 #head(df$df)
 res$entries
+df = gen_entries_to_df(res$entries)
+head(df$df)
 
+#Check if current title is in scopus
 IsError = try(get("error", res$entries[[1]][2]))
 
 if (IsError[1] != "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
