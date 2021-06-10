@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 ##Testing the function
-#install.packages('rscopus')
+library(rscopus)
 #set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
 #print(get_api_key(), reveal = T)
 
@@ -42,35 +42,103 @@ author_retrieval(au_id = "2-s2.0-0016525445", identifier = c("eid"),view = c("ST
 
 ```{r}
 ##Get Article name, put it into function, get data, put into output dataframe
-
-
-for(i in 1:nrow(TestDataFrame)){
+CitationData = matrix("NA",1,23)
+#CitationData = rep("NA",23)
+nrow(TestDataFrame)
+for(i in 1:1){
 articleTitle = paste0('Title(',TestDataFrame[i,'Article Title'],')')
-##print(articleTitle)
 
-res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2f77d2", max_count = 1,count = 1)
+res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", start = 1, max_count = 1,count = 1)
 
-IsError = try(get("error", res$entries[[1]][2]))
-if (IsError[1] != "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
-df = gen_entries_to_df(res$entries)
-head(df$df)
-}else {
- ##put empty thingy in the dataframe
+##IsError = try(get("error", res$entries[[1]][2]))
+
+##if (IsError[1] == "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
+  
+##df = head(gen_entries_to_df(res$entries)$df)
+    
+    ##Article Info
+    ArtclID = res$entries[[1]]$`dc:identifier`
+    Artclied = res$entries[[1]]$eid
+    ArtclTitle = TestDataFrame[i,'Article Title']
+    PublicationName = res$entries[[1]]$`prism:publicationName`
+    Publishisbn = res$entries[[1]]$`prism:isbn`[[2]]$`$`
+    PublishPageRange = res$entries[[1]]$`prism:pageRange`
+    PublishCoverDate = res$entries[[1]]$`prism:coverDate`
+    PublishCitedByCount = res$entries[[1]]$`citedby-count`
+    PUblishType = res$entries[[1]]$`prism:aggregationType`
+    PublishSubType = res$entries[[1]]$subtype
+    PublishSubTypeDescr = res$entries[[1]]$subtypeDescription
+    PublishVolume = res$entries[[1]]$`prism:volume`
+    ArticleDescr = res$entries[[1]]$`dc:description`
+    
+    ##Author Info
+    AuthorName = res$entries[[1]]$author[[1]]$authname
+    Initial = res$entries[[1]]$author[[1]]$initials
+    Firstname = res$entries[[1]]$author[[1]]$`given-name`
+    Lastname = res$entries[[1]]$author[[1]]$surname
+    AuthorID = res$entries[[1]]$author[[1]]$authid
+    
+    ##Affiliation Info
+    AffilID = res$entries[[1]]$affiliation[[1]]$afid
+    Affilname = res$entries[[1]]$affiliation[[1]]$affilname
+    Affilcity = res$entries[[1]]$affiliation[[1]]$`affiliation-city`
+    Affilcountry = res$entries[[1]]$affiliation[[1]]$`affiliation-country`
+    
+    IsError = try(get("error", res$entries[[1]][2]))
+    if (IsError[1] == "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
+    
+    InScopus = TRUE
+    
+    } else {
+      
+    InScopus = FALSE
+    
+    }
+
+
+    NewEntry = c(data = c(InScopus,
+                              ArtclID,
+                              Artclied,
+                              ArtclTitle,
+                              PublicationName,
+                              Publishisbn,
+                              PublishPageRange,
+                              PublishCoverDate,
+                              PublishCitedByCount,
+                              PUblishType,
+                              PublishSubType,
+                              PublishSubTypeDescr,
+                              PublishVolume,
+                              ArticleDescr,
+                              AuthorName,
+                              Initial,
+                              Firstname,
+                              Lastname,
+                              AuthorID,
+                              AffilID,
+                              Affilname,
+                              Affilcity,
+                              Affilcountry),nrow = 1,ncol = 23)
+
+    CitationData = rbind(CitationData,NewEntry)
+
 }
 
-}
+CitationData = as.data.frame(CitationData)
+names(CitationData) = c("InScopus", "ArtclID", "Artclied", "ArtclTitle", "PublicationName", "Publishisbn", "PublishPageRange", "PublishCoverDate", "PublishCitedByCount", "PUblishType", "PublishSubType", "PublishSubTypeDescr", "PublishVolume", "ArticleDescr", "AuthorName", "Initial", "Firstname", "Lastname", "AuthorID", "AffilID", "Affilname", "Affilcity", "Affilcountry")
+
+print(CitationData)
 
 #I need to get it into a df together with the original - add the output into a dataframe but then concatenate them all
-
+#what happens if the first item is not in scopus
 
 ```
 
 ```{r}
 ##identify if the data is in Scopus or not
 
-res = scopus_search(query = "Title(Specious Reward: A Behavioural Theory of Impulsiveness and Impulse Control)", api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
-#df = gen_entries_to_df(res$entries)
-#head(df$df)
+res = scopus_search(query = "Title(Holden v. Hardy, 169 U.S. 366 (1898))", api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+
 res$entries
 df = gen_entries_to_df(res$entries)
 head(df$df)
@@ -78,11 +146,73 @@ head(df$df)
 #Check if current title is in scopus
 IsError = try(get("error", res$entries[[1]][2]))
 
-if (IsError[1] != "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
+if (IsError[1] == "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
   print("works!")
 }else {
   print("whoopwhoop")
 }
+
+
+```
+
+```{r}
+##What can I get from that author info table
+res = scopus_search(query = "Title(Holden v. Hardy, 169 U.S. 366 (1898))", api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+
+res = scopus_search(query = "Title(Specious Reward: A Behavioural Theory of Impulsiveness and Impulse Control)", api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+df2 = gen_entries_to_df(res$entries)
+
+##Article Info
+ArtclID = res$entries[[1]]$`dc:identifier`
+Artclied = res$entries[[1]]$eid
+Title = res$entries[[1]]$`dc:title`
+PublicationName = res$entries[[1]]$`prism:publicationName`
+Publishisbn = res$entries[[1]]$`prism:isbn`[[2]]$`$`
+PublishPageRange = res$entries[[1]]$`prism:pageRange`
+PublishCoverDate = res$entries[[1]]$`prism:coverDate`
+PublishCitedByCount = res$entries[[1]]$`citedby-count`
+PUblishType = res$entries[[1]]$`prism:aggregationType`
+PublishSubType = res$entries[[1]]$subtype
+PublishSubTypeDescr = res$entries[[1]]$subtypeDescription
+PublishVolume = res$entries[[1]]$`prism:volume`
+ArticleDescr = res$entries[[1]]$`dc:description`
+
+##Author Info
+AuthorName = res$entries[[1]]$author[[1]]$authname
+Initial = res$entries[[1]]$author[[1]]$initials
+firstname = res$entries[[1]]$author[[1]]$`given-name`
+Lastname = res$entries[[1]]$author[[1]]$surname
+AuthorID = res$entries[[1]]$author[[1]]$authid
+
+##Affiliation Info
+AffilID = res$entries[[1]]$affiliation[[1]]$afid
+Affilname = res$entries[[1]]$affiliation[[1]]$affilname
+Affilcity = res$entries[[1]]$affiliation[[1]]$`affiliation-city`
+Affilcountry = res$entries[[1]]$affiliation[[1]]$`affiliation-country`
+
+
+
+
+testdf1 = matrix(data = c(ArtclID,Artclied,Title),nrow = 1,ncol = 3)
+testdf2 = matrix(data = ,Title),nrow = 1,ncol = 3)
+newdf = as.data.frame(rbind(testdf1,testdf2))
+
+names(newdf) = c("bla","die","bla")
+
+
+
+df = gen_entries_to_df(res2$entries)
+
+y = rbind(head(df$df),head(df2$df))
+z = rbind(y,head(df$df))
+z
+
+df2$df
+
+df
+
+
+
 
 
 ```
