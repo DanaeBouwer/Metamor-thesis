@@ -41,50 +41,127 @@ author_retrieval(au_id = "2-s2.0-0016525445", identifier = c("eid"),view = c("ST
 ```
 
 ```{r}
-##Get Article name, put it into function, get data, put into output dataframe
-CitationData = matrix("NA",1,23)
-#CitationData = rep("NA",23)
+#Setting up test table and loading package
+library(readxl)
+TestDataFrame = read_excel("TestDataFrame.xlsx")
+library(rscopus)
+
+#Get Article name, put it into function, get data, put into output dataframe
+CitationData = c()
 nrow(TestDataFrame)
-for(i in 1:1){
+for(i in 1:20){
 articleTitle = paste0('Title(',TestDataFrame[i,'Article Title'],')')
 
-res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", start = 1, max_count = 1,count = 1)
+#rScopus function to get the data from Scopus
+res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
 
-##IsError = try(get("error", res$entries[[1]][2]))
-
-##if (IsError[1] == "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
+#Filtering errors
+IsError = try(get("error", res$entries[[1]][2]))
+if (IsError == "Result set was empty"){
   
-##df = head(gen_entries_to_df(res$entries)$df)
+                InScopus = FALSE
+                
+                NewEntry = c(InScopus,
+                              NA,
+                              NA,
+                              TestDataFrame[i,'Article Title'],
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA)
+                  
+} else {
     
+ ##Defining available variables  
     ##Article Info
     ArtclID = res$entries[[1]]$`dc:identifier`
+    ArtclID[is.null(ArtclID)] = NA
+    
     Artclied = res$entries[[1]]$eid
+    Artclied[is.null(Artclied)] = NA
+    
     ArtclTitle = TestDataFrame[i,'Article Title']
+    ArtclTitle[is.null(ArtclTitle)] = NA
+    
     PublicationName = res$entries[[1]]$`prism:publicationName`
-    Publishisbn = res$entries[[1]]$`prism:isbn`[[2]]$`$`
+    PublicationName[is.null(PublicationName)] = NA
+    
+    Publishissn = unlist(res$entries[[1]]$`prism:issn`)
+    Publishissn[is.null(Publishissn)] = NA
+    
     PublishPageRange = res$entries[[1]]$`prism:pageRange`
+    PublishPageRange[is.null(PublishPageRange)] = NA
+    
     PublishCoverDate = res$entries[[1]]$`prism:coverDate`
+    PublishCoverDate[is.null(PublishCoverDate)] = NA
+    
     PublishCitedByCount = res$entries[[1]]$`citedby-count`
+    PublishCitedByCount[is.null(PublishCitedByCount)] = NA
+    
     PUblishType = res$entries[[1]]$`prism:aggregationType`
+    PUblishType[is.null(PUblishType)] = NA
+    
     PublishSubType = res$entries[[1]]$subtype
+    PublishSubType[is.null(PublishSubType)] = NA
+    
     PublishSubTypeDescr = res$entries[[1]]$subtypeDescription
+    PublishSubTypeDescr[is.null(PublishSubTypeDescr)] = NA
+    
     PublishVolume = res$entries[[1]]$`prism:volume`
+    PublishVolume[is.null(PublishVolume)] = NA
+    
     ArticleDescr = res$entries[[1]]$`dc:description`
+    ArticleDescr[is.null(ArticleDescr)] = NA
+    
     
     ##Author Info
     AuthorName = res$entries[[1]]$author[[1]]$authname
+    AuthorName[is.null(AuthorName)] = NA
+    
     Initial = res$entries[[1]]$author[[1]]$initials
+    Initial[is.null(Initial)] = NA
+    
     Firstname = res$entries[[1]]$author[[1]]$`given-name`
+    Firstname[is.null(Firstname)] = NA
+    
     Lastname = res$entries[[1]]$author[[1]]$surname
+    Lastname[is.null(Lastname)] = NA
+    
     AuthorID = res$entries[[1]]$author[[1]]$authid
+    AuthorID[is.null(AuthorID)] = NA
+    
     
     ##Affiliation Info
     AffilID = res$entries[[1]]$affiliation[[1]]$afid
-    Affilname = res$entries[[1]]$affiliation[[1]]$affilname
-    Affilcity = res$entries[[1]]$affiliation[[1]]$`affiliation-city`
-    Affilcountry = res$entries[[1]]$affiliation[[1]]$`affiliation-country`
+    AffilID[is.null(AffilID)] = NA
     
-    IsError = try(get("error", res$entries[[1]][2]))
+    Affilname = res$entries[[1]]$affiliation[[1]]$affilname
+    Affilname[is.null(Affilname)] = NA
+    
+    Affilcity = res$entries[[1]]$affiliation[[1]]$`affiliation-city`
+    Affilcity[is.null(Affilcity)] = NA
+    
+    Affilcountry = res$entries[[1]]$affiliation[[1]]$`affiliation-country`
+    Affilcountry[is.null(Affilcountry)] = NA
+    
+    
+  #Setting the InScopus variable
+
     if (IsError[1] == "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
     
     InScopus = TRUE
@@ -95,13 +172,13 @@ res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2
     
     }
 
-
-    NewEntry = c(data = c(InScopus,
+    #Creating the vector that populates the dataframe
+                 NewEntry = c(InScopus,
                               ArtclID,
                               Artclied,
                               ArtclTitle,
                               PublicationName,
-                              Publishisbn,
+                              Publishissn,
                               PublishPageRange,
                               PublishCoverDate,
                               PublishCitedByCount,
@@ -118,26 +195,62 @@ res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2
                               AffilID,
                               Affilname,
                               Affilcity,
-                              Affilcountry),nrow = 1,ncol = 23)
+                              Affilcountry)
 
     CitationData = rbind(CitationData,NewEntry)
 
 }
 
+}
+
+
 CitationData = as.data.frame(CitationData)
-names(CitationData) = c("InScopus", "ArtclID", "Artclied", "ArtclTitle", "PublicationName", "Publishisbn", "PublishPageRange", "PublishCoverDate", "PublishCitedByCount", "PUblishType", "PublishSubType", "PublishSubTypeDescr", "PublishVolume", "ArticleDescr", "AuthorName", "Initial", "Firstname", "Lastname", "AuthorID", "AffilID", "Affilname", "Affilcity", "Affilcountry")
+names(CitationData) = c("InScopus", "ArtclID", "Artclied", "ArtclTitle", "PublicationName", "Publishissn", "PublishPageRange", "PublishCoverDate", "PublishCitedByCount", "PUblishType", "PublishSubType", "PublishSubTypeDescr", "PublishVolume", "ArticleDescr", "AuthorName", "Initial", "Firstname", "Lastname", "AuthorID", "AffilID", "Affilname", "Affilcity", "Affilcountry")
 
 print(CitationData)
 
-#I need to get it into a df together with the original - add the output into a dataframe but then concatenate them all
-#what happens if the first item is not in scopus
+
 
 ```
 
 ```{r}
 ##identify if the data is in Scopus or not
 
-res = scopus_search(query = "Title(Holden v. Hardy, 169 U.S. 366 (1898))", api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+res = scopus_search(query = "Title(Coppage v. State of Kansas, 236 U.S.1 (1915))", api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+IsError = try(get("error", res$entries[[1]][2]))
+if (IsError == "Result set was empty"){
+  
+                InScopus = FALSE
+                
+                NewEntry = c(InScopus,
+                              NA,
+                              NA,
+                              TestDataFrame[i,'Article Title'],
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA)
+                
+                print(NewEntry)
+                  
+} else {
+"meh"
+}
 
 res$entries
 df = gen_entries_to_df(res$entries)
@@ -152,6 +265,7 @@ if (IsError[1] == "Error in get(\"error\", res$entries[[1]][2]) : object 'error'
   print("whoopwhoop")
 }
 
+print(NewEntry)
 
 ```
 
