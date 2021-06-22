@@ -9,36 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
-##Testing the function
-library(rscopus)
-#set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
-#print(get_api_key(), reveal = T)
-
-name = 'Ainslie'
-
-get_complete_author_info(last_name = 'Ainslie',first_name = 'George', api_key = "44f055d2666f0d63b928f6d10e2f77d2")
-get_author_info(last_name = name ,first_name = 'George', api_key = "44f055d2666f0d63b928f6d10e2f77d2")
-
-##try author_retrieval_id
-y = author_retrieval_id(id = "2-s2.0-0016525445", identifier = c("eid"))
-
-df = gen_entries_to_df(y$content)
-head(df$df)
-y$get_statement
-
-##try object_retrieval
-x = object_retrieval(id = "2-s2.0-0016525445", identifier = c("eid"))
-x$content
-
-##try process_author_name
-process_author_name(au_id = NULL, last_name = 'Ainslie', first_name = 'George', affil_id = NULL, api_key = NULL, verbose = TRUE, headers = NULL)
-
-
-
-author_retrieval(au_id = "2-s2.0-0016525445", identifier = c("eid"),view = c("STANDARD"),api_key = "44f055d2666f0d63b928f6d10e2f77d2")
-
-```
 
 ```{r}
 #Setting up test table and loading package
@@ -47,21 +17,73 @@ TestDataFrame = read_excel("TestDataFrame.xlsx")
 library(rscopus)
 
 #Get Article name, put it into function, get data, put into output dataframe
+
+
 CitationData = c()
-nrow(TestDataFrame)
-for(i in 1:20){
+
+##Start Loop
+for(i in 1:nrow(TestDataFrame)){
 articleTitle = paste0('Title(',TestDataFrame[i,'Article Title'],')')
+
+##Catch any 404 errors
+CatchError404 = tryCatch(
+    
+  expr = {
+            #rScopus function to get the data from Scopus
+            res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+          },
+    
+  error = function(error_message){ 
+            message("Error occured in Scopus")
+            IsError = print(error_message)
+          }
+)
+
+Error404 = unlist(CatchError404)[1]$message
+
+if (is.null(Error404) == FALSE){
+  
+  
+                
+                NewEntry = c(FALSE,
+                              NA,
+                              NA,
+                              TestDataFrame[i,'Article Title'],
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA,
+                              NA)
+  
+ } else {
+    
+
 
 #rScopus function to get the data from Scopus
 res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
 
+
 #Filtering errors
 IsError = try(get("error", res$entries[[1]][2]))
+
 if (IsError == "Result set was empty"){
   
-                InScopus = FALSE
                 
-                NewEntry = c(InScopus,
+                NewEntry = c(FALSE,
                               NA,
                               NA,
                               TestDataFrame[i,'Article Title'],
@@ -162,18 +184,18 @@ if (IsError == "Result set was empty"){
     
   #Setting the InScopus variable
 
-    if (IsError[1] == "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
+    #if (IsError[1] == "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
     
-    InScopus = TRUE
+    #InScopus = TRUE
     
-    } else {
+    #} else {
       
-    InScopus = FALSE
+    #InScopus = FALSE
     
-    }
+    #}
 
     #Creating the vector that populates the dataframe
-                 NewEntry = c(InScopus,
+                 NewEntry = c(TRUE,
                               ArtclID,
                               Artclied,
                               ArtclTitle,
@@ -197,9 +219,13 @@ if (IsError == "Result set was empty"){
                               Affilcity,
                               Affilcountry)
 
-    CitationData = rbind(CitationData,NewEntry)
+  }
+ 
+}   
 
-}
+CitationData = rbind(CitationData,NewEntry)
+
+
 
 }
 
@@ -214,120 +240,18 @@ print(CitationData)
 ```
 
 ```{r}
-##identify if the data is in Scopus or not
 
-res = scopus_search(query = "Title(Coppage v. State of Kansas, 236 U.S.1 (1915))", api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
-IsError = try(get("error", res$entries[[1]][2]))
-if (IsError == "Result set was empty"){
-  
-                InScopus = FALSE
-                
-                NewEntry = c(InScopus,
-                              NA,
-                              NA,
-                              TestDataFrame[i,'Article Title'],
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA,
-                              NA)
-                
-                print(NewEntry)
-                  
-} else {
-"meh"
-}
 
-res$entries
+res = complete_multi_author_info(au_id = c('7003483273'),api_key = "44f055d2666f0d63b928f6d10e2f77d2")
+
 df = gen_entries_to_df(res$entries)
 head(df$df)
 
-#Check if current title is in scopus
-IsError = try(get("error", res$entries[[1]][2]))
-
-if (IsError[1] == "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
-  print("works!")
-}else {
-  print("whoopwhoop")
-}
-
-print(NewEntry)
+type = "Scopus_ID"
+value = "0036867885"
+res = plumx_metrics(value, type)
+?plusx_metrics
 
 ```
 
-```{r}
-##What can I get from that author info table
-res = scopus_search(query = "Title(Holden v. Hardy, 169 U.S. 366 (1898))", api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
-
-res = scopus_search(query = "Title(Specious Reward: A Behavioural Theory of Impulsiveness and Impulse Control)", api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
-df2 = gen_entries_to_df(res$entries)
-
-##Article Info
-ArtclID = res$entries[[1]]$`dc:identifier`
-Artclied = res$entries[[1]]$eid
-Title = res$entries[[1]]$`dc:title`
-PublicationName = res$entries[[1]]$`prism:publicationName`
-Publishisbn = res$entries[[1]]$`prism:isbn`[[2]]$`$`
-PublishPageRange = res$entries[[1]]$`prism:pageRange`
-PublishCoverDate = res$entries[[1]]$`prism:coverDate`
-PublishCitedByCount = res$entries[[1]]$`citedby-count`
-PUblishType = res$entries[[1]]$`prism:aggregationType`
-PublishSubType = res$entries[[1]]$subtype
-PublishSubTypeDescr = res$entries[[1]]$subtypeDescription
-PublishVolume = res$entries[[1]]$`prism:volume`
-ArticleDescr = res$entries[[1]]$`dc:description`
-
-##Author Info
-AuthorName = res$entries[[1]]$author[[1]]$authname
-Initial = res$entries[[1]]$author[[1]]$initials
-firstname = res$entries[[1]]$author[[1]]$`given-name`
-Lastname = res$entries[[1]]$author[[1]]$surname
-AuthorID = res$entries[[1]]$author[[1]]$authid
-
-##Affiliation Info
-AffilID = res$entries[[1]]$affiliation[[1]]$afid
-Affilname = res$entries[[1]]$affiliation[[1]]$affilname
-Affilcity = res$entries[[1]]$affiliation[[1]]$`affiliation-city`
-Affilcountry = res$entries[[1]]$affiliation[[1]]$`affiliation-country`
-
-
-
-
-testdf1 = matrix(data = c(ArtclID,Artclied,Title),nrow = 1,ncol = 3)
-testdf2 = matrix(data = ,Title),nrow = 1,ncol = 3)
-newdf = as.data.frame(rbind(testdf1,testdf2))
-
-names(newdf) = c("bla","die","bla")
-
-
-
-df = gen_entries_to_df(res2$entries)
-
-y = rbind(head(df$df),head(df2$df))
-z = rbind(y,head(df$df))
-z
-
-df2$df
-
-df
-
-
-
-
-
-```
 
