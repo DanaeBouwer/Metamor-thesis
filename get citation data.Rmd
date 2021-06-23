@@ -59,6 +59,8 @@ if (is.null(Error404) == FALSE){
                               NA,
                               NA,
                               NA,
+                              NA, 
+                              NA,
                               NA,
                               NA,
                               NA,
@@ -105,6 +107,8 @@ if (IsError == "Result set was empty"){
                               NA,
                               NA,
                               NA,
+                              NA,
+                              NA,
                               NA)
                   
 } else {
@@ -114,8 +118,11 @@ if (IsError == "Result set was empty"){
     ArtclID = res$entries[[1]]$`dc:identifier`
     ArtclID[is.null(ArtclID)] = NA
     
-    Artclied = res$entries[[1]]$eid
+    Artcleid = res$entries[[1]]$eid
     Artclied[is.null(Artclied)] = NA
+    
+    ArtclDOI = res$entries[[1]]$`prism:doi`
+    ArtclDOI[is.null(ArtclDOI)] = NA
     
     ArtclTitle = TestDataFrame[i,'Article Title']
     ArtclTitle[is.null(ArtclTitle)] = NA
@@ -150,6 +157,8 @@ if (IsError == "Result set was empty"){
     ArticleDescr = res$entries[[1]]$`dc:description`
     ArticleDescr[is.null(ArticleDescr)] = NA
     
+    CitedbyCount = res$entries[[1]]$`citedby-count`
+    CitedbyCount[is.null(CitedbyCount)] = NA
     
     ##Author Info
     AuthorName = res$entries[[1]]$author[[1]]$authname
@@ -182,22 +191,13 @@ if (IsError == "Result set was empty"){
     Affilcountry[is.null(Affilcountry)] = NA
     
     
-  #Setting the InScopus variable
-
-    #if (IsError[1] == "Error in get(\"error\", res$entries[[1]][2]) : object 'error' not found\n" ) {
-    
-    #InScopus = TRUE
-    
-    #} else {
-      
-    #InScopus = FALSE
-    
-    #}
+  
 
     #Creating the vector that populates the dataframe
                  NewEntry = c(TRUE,
                               ArtclID,
                               Artclied,
+                              ArtclDOI,
                               ArtclTitle,
                               PublicationName,
                               Publishissn,
@@ -209,6 +209,7 @@ if (IsError == "Result set was empty"){
                               PublishSubTypeDescr,
                               PublishVolume,
                               ArticleDescr,
+                              CitedbyCount,
                               AuthorName,
                               Initial,
                               Firstname,
@@ -231,7 +232,7 @@ CitationData = rbind(CitationData,NewEntry)
 
 
 CitationData = as.data.frame(CitationData)
-names(CitationData) = c("InScopus", "ArtclID", "Artclied", "ArtclTitle", "PublicationName", "Publishissn", "PublishPageRange", "PublishCoverDate", "PublishCitedByCount", "PUblishType", "PublishSubType", "PublishSubTypeDescr", "PublishVolume", "ArticleDescr", "AuthorName", "Initial", "Firstname", "Lastname", "AuthorID", "AffilID", "Affilname", "Affilcity", "Affilcountry")
+names(CitationData) = c("InScopus", "ArtclID", "Artclied", "ArtclTitle", "PublicationName", "Publishissn", "PublishPageRange", "PublishCoverDate", "PublishCitedByCount", "PUblishType", "PublishSubType", "PublishSubTypeDescr", "PublishVolume", "ArticleDescr", "CitedbyCount","AuthorName", "Initial", "Firstname", "Lastname", "AuthorID", "AffilID", "Affilname", "Affilcity", "Affilcountry")
 
 print(CitationData)
 
@@ -242,15 +243,24 @@ print(CitationData)
 ```{r}
 
 
-res = complete_multi_author_info(au_id = c('7003483273'),api_key = "44f055d2666f0d63b928f6d10e2f77d2")
-
+res = complete_multi_author_info(au_id = c('7003483273','36877553300'),api_key = "44f055d2666f0d63b928f6d10e2f77d2")
+res$entries[[1]]$link[[2]]$`@href`
 df = gen_entries_to_df(res$entries)
 head(df$df)
 
-type = "Scopus_ID"
-value = "0036867885"
+
+##Using PlumX to get information on the article
+set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
+type = "doi"
+value = "10.1162/003355302320935025"
 res = plumx_metrics(value, type)
-?plusx_metrics
+
+res = scopus_search(query = 'title(Reversal of Fortune: Geography and Institutions in the Making of the Modern World Income Distribution)', api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+
+##this gives number of documents by author, breakdown of the total docs (like what portion falls in which field of study)
+get_complete_author_info(au_id = "36877553300",api_key = "44f055d2666f0d63b928f6d10e2f77d2")
+
+
 
 ```
 
