@@ -11,13 +11,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r}
-#Setting up test table and loading package
+#============================================================================================================================================================
+##Setting up test table and loading package
+#============================================================================================================================================================
+
 library(readxl)
 TestDataFrame = read_excel("TestDataFrame.xlsx")
 library(rscopus)
 
-#Get Article name, put it into function, get data, put into output dataframe
-
+#============================================================================================================================================================
+##Get Article name, put it into function, get data, put into output dataframe
+#============================================================================================================================================================
 
 CitationData = c()
 
@@ -25,11 +29,14 @@ CitationData = c()
 for(i in 1:nrow(TestDataFrame)){
 articleTitle = paste0('Title(',TestDataFrame[i,'Article Title'],')')
 
-##Catch any 404 errors
+#============================================================================================================================================================
+##Catch any 404 errors (404 error is if Scopus cannot show any results)
+#============================================================================================================================================================  
 CatchError404 = tryCatch(
     
   expr = {
             #rScopus function to get the data from Scopus
+    
             res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
           },
     
@@ -39,9 +46,9 @@ CatchError404 = tryCatch(
           }
 )
 
-Error404 = unlist(CatchError404)[1]$message
+IsError404 = unlist(CatchError404)[1]$message
 
-if (is.null(Error404) == FALSE){
+if (is.null(IsError404) == FALSE){
   
   
                 
@@ -49,7 +56,6 @@ if (is.null(Error404) == FALSE){
                               NA,
                               NA,
                               TestDataFrame[i,'Article Title'],
-                              NA,
                               NA,
                               NA,
                               NA,
@@ -70,19 +76,25 @@ if (is.null(Error404) == FALSE){
                               NA,
                               NA,
                               NA)
+                
+                CitationData = rbind(CitationData,NewEntry)
   
  } else {
     
-
+#============================================================================================================================================================
+##If there was no 404 error and the article was either in Scopus or Result set was empty
+#============================================================================================================================================================
 
 #rScopus function to get the data from Scopus
+   
 res = scopus_search(query = articleTitle, api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
 
 
-#Filtering errors
-IsError = try(get("error", res$entries[[1]][2]))
+#Filtering for 'Result set was empty' errors
 
-if (IsError == "Result set was empty"){
+IsErrorEmptyResultSet = try(get("error", res$entries[[1]][2]))
+
+if (IsErrorEmptyResultSet == "Result set was empty"){
   
                 
                 NewEntry = c(FALSE,
@@ -108,18 +120,21 @@ if (IsError == "Result set was empty"){
                               NA,
                               NA,
                               NA,
-                              NA,
                               NA)
+                
+                CitationData = rbind(CitationData,NewEntry)
                   
-} else {
+  } else {
     
- ##Defining available variables  
-    ##Article Info
+###Defining available variables
+    
+##Article Information
+    
     ArtclID = res$entries[[1]]$`dc:identifier`
     ArtclID[is.null(ArtclID)] = NA
     
     Artcleid = res$entries[[1]]$eid
-    Artclied[is.null(Artclied)] = NA
+    Artcleid[is.null(Artcleid)] = NA
     
     ArtclDOI = res$entries[[1]]$`prism:doi`
     ArtclDOI[is.null(ArtclDOI)] = NA
@@ -139,9 +154,6 @@ if (IsError == "Result set was empty"){
     PublishCoverDate = res$entries[[1]]$`prism:coverDate`
     PublishCoverDate[is.null(PublishCoverDate)] = NA
     
-    PublishCitedByCount = res$entries[[1]]$`citedby-count`
-    PublishCitedByCount[is.null(PublishCitedByCount)] = NA
-    
     PUblishType = res$entries[[1]]$`prism:aggregationType`
     PUblishType[is.null(PUblishType)] = NA
     
@@ -160,7 +172,101 @@ if (IsError == "Result set was empty"){
     CitedbyCount = res$entries[[1]]$`citedby-count`
     CitedbyCount[is.null(CitedbyCount)] = NA
     
-    ##Author Info
+    AuthorCount = res$entries[[1]]$`author-count`$`$`
+    AuthorCount[is.null(AuthorCount)] = NA
+    AuthorCount = as.numeric(AuthorCount)
+    
+#============================================================================================================================================================
+##Account for multiple authors per article   
+#============================================================================================================================================================
+
+##If there is multiple authors for the article
+if (AuthorCount > 1){ 
+  
+  for(j in 1:AuthorCount){
+    
+##Author Info
+    
+    AuthorName = res$entries[[1]]$author[[j]]$authname
+    AuthorName[is.null(AuthorName)] = NA
+    
+    Initial = res$entries[[1]]$author[[j]]$initials
+    Initial[is.null(Initial)] = NA
+    
+    Firstname = res$entries[[1]]$author[[j]]$`given-name`
+    Firstname[is.null(Firstname)] = NA
+    
+    Lastname = res$entries[[1]]$author[[j]]$surname
+    Lastname[is.null(Lastname)] = NA
+    
+    AuthorID = res$entries[[1]]$author[[j]]$authid
+    AuthorID[is.null(AuthorID)] = NA
+    
+    
+##Affiliation Info
+    
+    ##Handle cases where some Affiliation info is missing
+    
+    IsErrorSubscriptOOB = try(get("error", res$entries[[1]]$affiliation[[j]]$affilname))[1]
+    
+    if(IsErrorSubscriptOOB == "Error in res$entries[[1]]$affiliation[[j]] : subscript out of bounds\n"){
+      AffilID = NA
+      Affilname = NA
+      Affilcity = NA
+      Affilcountry = NA
+    } else {
+    
+    AffilID = res$entries[[1]]$affiliation[[j]]$afid
+    AffilID[is.null(AffilID)] = NA
+    
+    Affilname = res$entries[[1]]$affiliation[[j]]$affilname
+    Affilname[is.null(Affilname)] = NA
+    
+    Affilcity = res$entries[[1]]$affiliation[[j]]$`affiliation-city`
+    Affilcity[is.null(Affilcity)] = NA
+    
+    Affilcountry = res$entries[[1]]$affiliation[[j]]$`affiliation-country`
+    Affilcountry[is.null(Affilcountry)] = NA
+    
+    }
+
+###Creating the vector that populates the dataframe
+    
+                 NewEntry = c(TRUE,
+                              ArtclID,
+                              Artcleid,
+                              ArtclDOI,
+                              ArtclTitle,
+                              PublicationName,
+                              Publishissn,
+                              PublishPageRange,
+                              PublishCoverDate,
+                              PUblishType,
+                              PublishSubType,
+                              PublishSubTypeDescr,
+                              PublishVolume,
+                              ArticleDescr,
+                              CitedbyCount,
+                              AuthorName,
+                              Initial,
+                              Firstname,
+                              Lastname,
+                              AuthorID,
+                              AffilID,
+                              Affilname,
+                              Affilcity,
+                              Affilcountry)
+                 
+                  CitationData = rbind(CitationData,NewEntry)
+    
+  }
+
+##If there is only one Author  
+  
+  } else {
+  
+##Author Info
+    
     AuthorName = res$entries[[1]]$author[[1]]$authname
     AuthorName[is.null(AuthorName)] = NA
     
@@ -177,7 +283,8 @@ if (IsError == "Result set was empty"){
     AuthorID[is.null(AuthorID)] = NA
     
     
-    ##Affiliation Info
+##Affiliation Info
+    
     AffilID = res$entries[[1]]$affiliation[[1]]$afid
     AffilID[is.null(AffilID)] = NA
     
@@ -190,20 +297,18 @@ if (IsError == "Result set was empty"){
     Affilcountry = res$entries[[1]]$affiliation[[1]]$`affiliation-country`
     Affilcountry[is.null(Affilcountry)] = NA
     
-    
-  
 
-    #Creating the vector that populates the dataframe
+###Creating the vector that populates the dataframe
+    
                  NewEntry = c(TRUE,
                               ArtclID,
-                              Artclied,
+                              Artcleid,
                               ArtclDOI,
                               ArtclTitle,
                               PublicationName,
                               Publishissn,
                               PublishPageRange,
                               PublishCoverDate,
-                              PublishCitedByCount,
                               PUblishType,
                               PublishSubType,
                               PublishSubTypeDescr,
@@ -219,22 +324,23 @@ if (IsError == "Result set was empty"){
                               Affilname,
                               Affilcity,
                               Affilcountry)
-
-  }
+  
+                CitationData = rbind(CitationData,NewEntry)
+      }
+    
+    }
  
-}   
+  }   
 
-CitationData = rbind(CitationData,NewEntry)
-
-
+##CitationData = rbind(CitationData,NewEntry)
 
 }
 
 
-CitationData = as.data.frame(CitationData)
-names(CitationData) = c("InScopus", "ArtclID", "Artclied", "ArtclTitle", "PublicationName", "Publishissn", "PublishPageRange", "PublishCoverDate", "PublishCitedByCount", "PUblishType", "PublishSubType", "PublishSubTypeDescr", "PublishVolume", "ArticleDescr", "CitedbyCount","AuthorName", "Initial", "Firstname", "Lastname", "AuthorID", "AffilID", "Affilname", "Affilcity", "Affilcountry")
+##Adding column headers
 
-print(CitationData)
+CitationData = as.data.frame(CitationData)
+names(CitationData) = c("In Scopus", "Article Scopus ID", "Article eid","Article DOI", "Article Title", "Publication Name", "Publish issn", "Publish Page Range", "Publish Cover Date", "PUblish Type", "Publish SubType", "Publish SubType Description", "Publish Volume", "Article Description", "Article Cited by Count","Author Name", "Initial", "Firstname", "Lastname", "Author Scopus ID", "Affiliation ID", "Affiliation name", "Affiliation city", "Affiliation country")
 
 
 
@@ -242,6 +348,7 @@ print(CitationData)
 
 ```{r}
 
+##Testing out functions
 
 res = complete_multi_author_info(au_id = c('7003483273','36877553300'),api_key = "44f055d2666f0d63b928f6d10e2f77d2")
 res$entries[[1]]$link[[2]]$`@href`
@@ -251,16 +358,25 @@ head(df$df)
 
 ##Using PlumX to get information on the article
 set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
-type = "doi"
-value = "10.1162/003355302320935025"
+type = "elsevierId"
+value = "9-s2.0-36877553300"
 res = plumx_metrics(value, type)
 
-res = scopus_search(query = 'title(Reversal of Fortune: Geography and Institutions in the Making of the Modern World Income Distribution)', api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+res = scopus_search(query = 'title(Cooperation and Bounded Recall,)', api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+Affilname = res$entries[[1]]$affiliation[[3]]$affilname
+j = 3
+IsErrorSubscriptOOB = try(get("error", res$entries[[1]]$affiliation[[j]]$affilname))[1]
+IsErrorEmptyResultSet = try(get("error", res$entries[[1]][2]))
+
 
 ##this gives number of documents by author, breakdown of the total docs (like what portion falls in which field of study)
-get_complete_author_info(au_id = "36877553300",api_key = "44f055d2666f0d63b928f6d10e2f77d2")
+meh = get_complete_author_info(au_id = "36877553300",api_key = "44f055d2666f0d63b928f6d10e2f77d2")
 
+meh$content
 
+generic_elsevier_api(query = "https://api.elsevier.com/metrics/metrics?metrics=ScholarlyOutput%2CCitedPublications&authors=6701858763%2C20433296900&yearRange=5yrs&includeSelfCitations=true&byYear=true&includedDocs=AllPublicationTypes&journalImpactType=CiteScore&showAsFieldWeighted=false&indexType=hIndex",type = "search", search_type = "author",
+api_key = "44f055d2666f0d63b928f6d10e2f77d2")
+ https://api.elsevier.com/metrics/metrics?metrics=ScholarlyOutput%2CCitedPublications&authors=6701858763%2C20433296900&yearRange=5yrs&includeSelfCitations=true&byYear=true&includedDocs=AllPublicationTypes&journalImpactType=CiteScore&showAsFieldWeighted=false&indexType=hIndex
 
 ```
 
