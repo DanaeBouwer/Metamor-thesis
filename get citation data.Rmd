@@ -12,12 +12,16 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 #============================================================================================================================================================
-##Setting up test table and loading package
+##Setting up test table and loading packages
 #============================================================================================================================================================
 
-library(readxl)
+library(xlsx)
 TestDataFrame = read_excel("TestDataFrame.xlsx")
+
 library(rscopus)
+set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
+
+library("writexl")
 
 #============================================================================================================================================================
 ##Get Article name, put it into function, get data, put into output dataframe
@@ -75,6 +79,7 @@ if (is.null(IsError404) == FALSE){
                               NA,
                               NA,
                               NA,
+                              NA,
                               NA)
                 
                 CitationData = rbind(CitationData,NewEntry)
@@ -101,6 +106,7 @@ if (IsErrorEmptyResultSet == "Result set was empty"){
                               NA,
                               NA,
                               TestDataFrame[i,'Article Title'],
+                              NA,
                               NA,
                               NA,
                               NA,
@@ -177,6 +183,12 @@ if (IsErrorEmptyResultSet == "Result set was empty"){
     AuthorCount = as.numeric(AuthorCount)
     
 #============================================================================================================================================================
+##Adding the PlumX metrics  
+#============================================================================================================================================================
+   
+##Should I add this?
+    
+#============================================================================================================================================================
 ##Account for multiple authors per article   
 #============================================================================================================================================================
 
@@ -207,26 +219,33 @@ if (AuthorCount > 1){
     
     ##Handle cases where some Affiliation info is missing
     
-    IsErrorSubscriptOOB = try(get("error", res$entries[[1]]$affiliation[[j]]$affilname))[1]
+    IsErrorSubscriptOOB = try(get("error", res$entries[[1]]$author[[j]]$afid[[1]]$`$`))[1]
     
-    if(IsErrorSubscriptOOB == "Error in res$entries[[1]]$affiliation[[j]] : subscript out of bounds\n"){
+    if(IsErrorSubscriptOOB == "Error in res$entries[[1]]$author[[j]]$afid[[1]]$`$` : subscript out of bounds\n"){
       AffilID = NA
       Affilname = NA
       Affilcity = NA
       Affilcountry = NA
+      AffilAddress = NA
     } else {
     
-    AffilID = res$entries[[1]]$affiliation[[j]]$afid
+    AffilID = res$entries[[1]]$author[[j]]$afid[[1]]$`$`
     AffilID[is.null(AffilID)] = NA
     
-    Affilname = res$entries[[1]]$affiliation[[j]]$affilname
+   #Get Affiliation Info
+    Affil = affiliation_retrieval(AffilID, identifier = "affiliation_id") 
+    
+    Affilname = Affil$content$`affiliation-retrieval-response`$`affiliation-name`
     Affilname[is.null(Affilname)] = NA
     
-    Affilcity = res$entries[[1]]$affiliation[[j]]$`affiliation-city`
+    Affilcity = Affil$content$`affiliation-retrieval-response`$city
     Affilcity[is.null(Affilcity)] = NA
     
-    Affilcountry = res$entries[[1]]$affiliation[[j]]$`affiliation-country`
+    Affilcountry = Affil$content$`affiliation-retrieval-response`$country
     Affilcountry[is.null(Affilcountry)] = NA
+    
+    AffilAddress = Affil$content$`affiliation-retrieval-response`$address
+    AffilAddress[is.null(AffilAddress)] = NA
     
     }
 
@@ -255,7 +274,8 @@ if (AuthorCount > 1){
                               AffilID,
                               Affilname,
                               Affilcity,
-                              Affilcountry)
+                              Affilcountry,
+                              AffilAddress)
                  
                   CitationData = rbind(CitationData,NewEntry)
     
@@ -285,17 +305,23 @@ if (AuthorCount > 1){
     
 ##Affiliation Info
     
-    AffilID = res$entries[[1]]$affiliation[[1]]$afid
+    AffilID = res$entries[[1]]$author[[1]]$afid[[1]]$`$`
     AffilID[is.null(AffilID)] = NA
     
-    Affilname = res$entries[[1]]$affiliation[[1]]$affilname
+  #Get Affiliation Info
+    Affil = affiliation_retrieval(AffilID, identifier = "affiliation_id") 
+    
+    Affilname = Affil$content$`affiliation-retrieval-response`$`affiliation-name`
     Affilname[is.null(Affilname)] = NA
     
-    Affilcity = res$entries[[1]]$affiliation[[1]]$`affiliation-city`
+    Affilcity = Affil$content$`affiliation-retrieval-response`$city
     Affilcity[is.null(Affilcity)] = NA
     
-    Affilcountry = res$entries[[1]]$affiliation[[1]]$`affiliation-country`
+    Affilcountry = Affil$content$`affiliation-retrieval-response`$country
     Affilcountry[is.null(Affilcountry)] = NA
+    
+    AffilAddress = Affil$content$`affiliation-retrieval-response`$address
+    AffilAddress[is.null(AffilAddress)] = NA
     
 
 ###Creating the vector that populates the dataframe
@@ -323,7 +349,8 @@ if (AuthorCount > 1){
                               AffilID,
                               Affilname,
                               Affilcity,
-                              Affilcountry)
+                              Affilcountry,
+                              AffilAddress)
   
                 CitationData = rbind(CitationData,NewEntry)
       }
@@ -332,17 +359,18 @@ if (AuthorCount > 1){
  
   }   
 
-##CitationData = rbind(CitationData,NewEntry)
-
 }
 
 
 ##Adding column headers
 
 CitationData = as.data.frame(CitationData)
-names(CitationData) = c("In Scopus", "Article Scopus ID", "Article eid","Article DOI", "Article Title", "Publication Name", "Publish issn", "Publish Page Range", "Publish Cover Date", "PUblish Type", "Publish SubType", "Publish SubType Description", "Publish Volume", "Article Description", "Article Cited by Count","Author Name", "Initial", "Firstname", "Lastname", "Author Scopus ID", "Affiliation ID", "Affiliation name", "Affiliation city", "Affiliation country")
+names(CitationData) = c("In Scopus", "Article Scopus ID", "Article eid","Article DOI", "Article Title", "Publication Name", "Publish issn", "Publish Page Range", "Publish Cover Date", "PUblish Type", "Publish SubType", "Publish SubType Description", "Publish Volume", "Article Description", "Article Cited by Count","Author Name", "Initial", "Firstname", "Lastname", "Author Scopus ID", "Affiliation ID", "Affiliation name", "Affiliation city", "Affiliation country", "Affiliation Address")
+write_xlsx(CitationData,"C://Users//DanaeBouwer//OneDrive - BSC Holdings//Documents//Thesis//Code//R code//CitationData.xlsx")
 
 
+##Exporting Dataframe to an external table
+write.xlsx(CitationData,"CitationData.xlsx")
 
 ```
 
@@ -359,24 +387,26 @@ head(df$df)
 ##Using PlumX to get information on the article
 set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
 type = "elsevierId"
-value = "9-s2.0-36877553300"
-res = plumx_metrics(value, type)
+value = "2-s2.0-84917009549"
+plumX = plumx_metrics(value, type)
 
-res = scopus_search(query = 'title(Cooperation and Bounded Recall,)', api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
-Affilname = res$entries[[1]]$affiliation[[3]]$affilname
+res = scopus_search(query = 'title(Reversal of Fortune: Geography and Institutions in the Making of the Modern World Income Distribution)', api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+AuthorName = res$entries[[1]]$author[[1]]$authname
+Affilname = res$entries[[1]]$affiliation[[1]]$affilname
 j = 3
 IsErrorSubscriptOOB = try(get("error", res$entries[[1]]$affiliation[[j]]$affilname))[1]
 IsErrorEmptyResultSet = try(get("error", res$entries[[1]][2]))
 
 
 ##this gives number of documents by author, breakdown of the total docs (like what portion falls in which field of study)
-meh = get_complete_author_info(au_id = "36877553300",api_key = "44f055d2666f0d63b928f6d10e2f77d2")
+meh = get_complete_author_info(au_id = "57198433819")
 
 meh$content
 
-generic_elsevier_api(query = "https://api.elsevier.com/metrics/metrics?metrics=ScholarlyOutput%2CCitedPublications&authors=6701858763%2C20433296900&yearRange=5yrs&includeSelfCitations=true&byYear=true&includedDocs=AllPublicationTypes&journalImpactType=CiteScore&showAsFieldWeighted=false&indexType=hIndex",type = "search", search_type = "author",
+generic_elsevier_api(query = "",type = "search", search_type = "author",
 api_key = "44f055d2666f0d63b928f6d10e2f77d2")
- https://api.elsevier.com/metrics/metrics?metrics=ScholarlyOutput%2CCitedPublications&authors=6701858763%2C20433296900&yearRange=5yrs&includeSelfCitations=true&byYear=true&includedDocs=AllPublicationTypes&journalImpactType=CiteScore&showAsFieldWeighted=false&indexType=hIndex
+
+affiliation_retrieval("60022195", identifier = "affiliation_id")
 
 ```
 
