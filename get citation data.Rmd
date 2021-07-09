@@ -15,8 +15,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ##Setting up test table and loading packages
 #============================================================================================================================================================
 
-library(xlsx)
-TestDataFrame = read_excel("TestDataFrame.xlsx")
+library(readxl)
+TestDataFrame = read_excel("ListOfTitles.xlsx")
 
 library(rscopus)
 set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
@@ -28,10 +28,10 @@ library("writexl")
 #============================================================================================================================================================
 
 CitationData = c()
-
+Count = 0
 ##Start Loop
 for(i in 1:nrow(TestDataFrame)){
-articleTitle = paste0('Title(',TestDataFrame[i,'Article Title'],')')
+articleTitle = paste0('Title({',TestDataFrame[i,'Article Title'],'})')
 
 #============================================================================================================================================================
 ##Catch any 404 errors (404 error is if Scopus cannot show any results)
@@ -59,6 +59,7 @@ if (is.null(IsError404) == FALSE){
                 NewEntry = c(FALSE,
                               NA,
                               NA,
+                              NA,
                               TestDataFrame[i,'Article Title'],
                               NA,
                               NA,
@@ -83,6 +84,7 @@ if (is.null(IsError404) == FALSE){
                               NA)
                 
                 CitationData = rbind(CitationData,NewEntry)
+                Count = Count + 1
   
  } else {
     
@@ -103,6 +105,7 @@ if (IsErrorEmptyResultSet == "Result set was empty"){
   
                 
                 NewEntry = c(FALSE,
+                              NA,
                               NA,
                               NA,
                               TestDataFrame[i,'Article Title'],
@@ -129,6 +132,7 @@ if (IsErrorEmptyResultSet == "Result set was empty"){
                               NA)
                 
                 CitationData = rbind(CitationData,NewEntry)
+                Count = Count + 1
                   
   } else {
     
@@ -179,8 +183,9 @@ if (IsErrorEmptyResultSet == "Result set was empty"){
     CitedbyCount[is.null(CitedbyCount)] = NA
     
     AuthorCount = res$entries[[1]]$`author-count`$`$`
-    AuthorCount[is.null(AuthorCount)] = NA
+    AuthorCount[is.null(AuthorCount)] = 0
     AuthorCount = as.numeric(AuthorCount)
+      
     
 #============================================================================================================================================================
 ##Adding the PlumX metrics  
@@ -213,6 +218,7 @@ if (AuthorCount > 1){
     
     AuthorID = res$entries[[1]]$author[[j]]$authid
     AuthorID[is.null(AuthorID)] = NA
+    
     
     
 ##Affiliation Info
@@ -266,6 +272,7 @@ if (AuthorCount > 1){
                               PublishVolume,
                               ArticleDescr,
                               CitedbyCount,
+                              AuthorCount,
                               AuthorName,
                               Initial,
                               Firstname,
@@ -278,6 +285,7 @@ if (AuthorCount > 1){
                               AffilAddress)
                  
                   CitationData = rbind(CitationData,NewEntry)
+                  Count = Count + 1
     
   }
 
@@ -341,6 +349,7 @@ if (AuthorCount > 1){
                               PublishVolume,
                               ArticleDescr,
                               CitedbyCount,
+                              AuthorCount,
                               AuthorName,
                               Initial,
                               Firstname,
@@ -353,6 +362,7 @@ if (AuthorCount > 1){
                               AffilAddress)
   
                 CitationData = rbind(CitationData,NewEntry)
+                Count = Count + 1
       }
     
     }
@@ -365,7 +375,7 @@ if (AuthorCount > 1){
 ##Adding column headers
 
 CitationData = as.data.frame(CitationData)
-names(CitationData) = c("In Scopus", "Article Scopus ID", "Article eid","Article DOI", "Article Title", "Publication Name", "Publish issn", "Publish Page Range", "Publish Cover Date", "PUblish Type", "Publish SubType", "Publish SubType Description", "Publish Volume", "Article Description", "Article Cited by Count","Author Name", "Initial", "Firstname", "Lastname", "Author Scopus ID", "Affiliation ID", "Affiliation name", "Affiliation city", "Affiliation country", "Affiliation Address")
+names(CitationData) = c("In Scopus", "Article Scopus ID", "Article eid","Article DOI", "Article Title", "Publication Name", "Publish issn", "Publish Page Range", "Publish Cover Date", "PUblish Type", "Publish SubType", "Publish SubType Description", "Publish Volume", "Article Description", "Article Cited by Count","Author Count","Author Name", "Initial", "Firstname", "Lastname", "Author Scopus ID", "Affiliation ID", "Affiliation name", "Affiliation city", "Affiliation country", "Affiliation Address")
 write_xlsx(CitationData,"C://Users//DanaeBouwer//OneDrive - BSC Holdings//Documents//Thesis//Code//R code//CitationData.xlsx")
 
 
@@ -387,16 +397,17 @@ head(df$df)
 ##Using PlumX to get information on the article
 set_api_key("44f055d2666f0d63b928f6d10e2f77d2")
 type = "elsevierId"
-value = "2-s2.0-84917009549"
-plumX = plumx_metrics(value, type)
+value = "2-s2.0-0036867885"
 
-res = scopus_search(query = 'title(Reversal of Fortune: Geography and Institutions in the Making of the Modern World Income Distribution)', api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
+
+
+res = scopus_search(query = 'title({Reversal of Fortune: Geography and Institutions in the Making of the Modern World Income Distribution})', api_key = "44f055d2666f0d63b928f6d10e2f77d2",view = "COMPLETE", max_count = 1,count = 1)
 AuthorName = res$entries[[1]]$author[[1]]$authname
 Affilname = res$entries[[1]]$affiliation[[1]]$affilname
 j = 3
 IsErrorSubscriptOOB = try(get("error", res$entries[[1]]$affiliation[[j]]$affilname))[1]
 IsErrorEmptyResultSet = try(get("error", res$entries[[1]][2]))
-
+res
 
 ##this gives number of documents by author, breakdown of the total docs (like what portion falls in which field of study)
 meh = get_complete_author_info(au_id = "57198433819")
